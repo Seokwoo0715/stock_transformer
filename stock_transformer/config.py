@@ -62,7 +62,7 @@ class TrainConfig:
     weight_decay: float = 1e-5
     epochs: int = 100
     patience: int = 15              # Early stopping
-    label_threshold: float = 0.001  # 수익률 ±0.1% 이내 → Flat
+    label_threshold: float = 0.003  # 수익률 ±0.3% 이내 → Flat
     device: str = "auto"            # auto, cpu, cuda, mps
     seed: int = 42
     save_dir: str = "checkpoints"
