@@ -57,6 +57,7 @@ def main():
         train_ratio=data_cfg.train_ratio,
         val_ratio=data_cfg.val_ratio,
         label_threshold=train_cfg.label_threshold,
+        use_technical=model_cfg.use_technical_indicators,
     )
 
     # ── 3. 모델 생성 ──

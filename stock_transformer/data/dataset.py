@@ -79,6 +79,7 @@ def create_dataloaders(
     train_ratio: float = 0.8,
     val_ratio: float = 0.1,
     label_threshold: float = 0.001,
+    use_technical: bool = True,
 ) -> tuple:
     """
     시계열 순서를 유지한 train/val/test 분할
@@ -94,9 +95,9 @@ def create_dataloaders(
     val_df = df.iloc[train_end - seq_len:val_end]   # seq_len만큼 겹침 허용
     test_df = df.iloc[val_end - seq_len:]
 
-    train_ds = StockSequenceDataset(train_df, seq_len, label_threshold=label_threshold)
-    val_ds = StockSequenceDataset(val_df, seq_len, label_threshold=label_threshold)
-    test_ds = StockSequenceDataset(test_df, seq_len, label_threshold=label_threshold)
+    train_ds = StockSequenceDataset(train_df, seq_len, use_technical=use_technical, label_threshold=label_threshold)
+    val_ds = StockSequenceDataset(val_df, seq_len, use_technical=use_technical, label_threshold=label_threshold)
+    test_ds = StockSequenceDataset(test_df, seq_len, use_technical=use_technical, label_threshold=label_threshold)
 
     train_loader = torch.utils.data.DataLoader(
         train_ds, batch_size=batch_size, shuffle=True, drop_last=True
