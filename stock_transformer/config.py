@@ -37,7 +37,7 @@ class ModelConfig:
     num_classes: int = 3            # Up / Down / Flat
 
     # 기술지표 추가 시 input_dim 변경
-    use_technical_indicators: bool = True
+    use_technical_indicators: bool = False
     technical_features: List[str] = field(default_factory=lambda: [
         "RSI", "MA_10", "MA_30", "MACD", "MACD_signal", "Volume_change"
     ])
