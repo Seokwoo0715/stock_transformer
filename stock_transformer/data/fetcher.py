@@ -99,3 +99,54 @@ def load_cached_or_fetch(
 
     df = fetch_intraday(ticker, interval, save_path=str(cache_path))
     return df
+
+
+def fetch_multi_tickers(
+    tickers: list,
+    interval: str = "10m",
+    cache_dir: str = "data_cache",
+) -> pd.DataFrame:
+    """
+    여러 종목 데이터를 수집하고 합침
+
+    각 종목의 OHLCV를 개별적으로 정규화하기 위해
+    가격을 수익률(pct_change)로 변환하여 스케일을 통일.
+
+    Returns:
+        합쳐진 DataFrame (수익률 기반)
+    """
+    all_dfs = []
+
+    for ticker in tickers:
+        try:
+            df = load_cached_or_fetch(ticker, interval, cache_dir)
+
+            # 가격을 수익률로 변환 (종목 간 스케일 통일)
+            price_cols = ["Open", "High", "Low", "Close"]
+            for col in price_cols:
+                df[col] = df[col].pct_change()
+
+            # Volume은 로그 스케일 후 변화율
+            df["Volume"] = df["Volume"].apply(lambda x: max(x, 1))  # 0 방지
+            df["Volume"] = df["Volume"].pct_change()
+
+            # 첫 행 제거 (pct_change로 인한 NaN)
+            df = df.iloc[1:]
+
+            # Inf/NaN 클리핑
+            df = df.clip(-0.5, 0.5)
+            df = df.fillna(0)
+
+            all_dfs.append(df)
+            print(f"[Fetcher] {ticker}: {len(df)}개 봉 추가")
+        except Exception as e:
+            print(f"[Fetcher] {ticker} 수집 실패: {e}")
+
+    if not all_dfs:
+        raise ValueError("수집된 데이터가 없습니다.")
+
+    combined = pd.concat(all_dfs, axis=0)
+    combined = combined.sort_index()
+
+    print(f"[Fetcher] 총 {len(combined)}개 봉 (종목 {len(all_dfs)}개 합산)")
+    return combined

@@ -9,6 +9,10 @@ from typing import List
 @dataclass
 class DataConfig:
     ticker: str = "GOOGL"
+    tickers: List[str] = field(default_factory=lambda: [
+        "GOOGL", "AAPL", "MSFT", "AMZN", "META", "NVDA", "TSLA", "NFLX"
+    ])
+    multi_ticker: bool = True       # 여러 종목 합쳐서 학습
     interval: str = "10m"           # 10분봉
     seq_len: int = 96               # 입력 시퀀스 길이 (48~144 범위)
     features: List[str] = field(default_factory=lambda: [

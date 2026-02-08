@@ -25,6 +25,7 @@ class StockSequenceDataset(Dataset):
         seq_len: int = 96,
         use_technical: bool = True,
         label_threshold: float = 0.001,
+        is_returns: bool = False,
     ):
         self.seq_len = seq_len
         self.ohlcv_cols = ["Open", "High", "Low", "Close", "Volume"]
@@ -34,7 +35,7 @@ class StockSequenceDataset(Dataset):
             df = add_technical_indicators(df)
 
         # 라벨 생성
-        labels = create_labels(df, threshold=label_threshold)
+        labels = create_labels(df, threshold=label_threshold, is_returns=is_returns)
 
         # 사용할 피처 컬럼
         self.feature_cols = [c for c in df.columns if c in
@@ -80,6 +81,7 @@ def create_dataloaders(
     val_ratio: float = 0.1,
     label_threshold: float = 0.001,
     use_technical: bool = True,
+    is_returns: bool = False,
 ) -> tuple:
     """
     시계열 순서를 유지한 train/val/test 분할
@@ -95,9 +97,9 @@ def create_dataloaders(
     val_df = df.iloc[train_end - seq_len:val_end]   # seq_len만큼 겹침 허용
     test_df = df.iloc[val_end - seq_len:]
 
-    train_ds = StockSequenceDataset(train_df, seq_len, use_technical=use_technical, label_threshold=label_threshold)
-    val_ds = StockSequenceDataset(val_df, seq_len, use_technical=use_technical, label_threshold=label_threshold)
-    test_ds = StockSequenceDataset(test_df, seq_len, use_technical=use_technical, label_threshold=label_threshold)
+    train_ds = StockSequenceDataset(train_df, seq_len, use_technical=use_technical, label_threshold=label_threshold, is_returns=is_returns)
+    val_ds = StockSequenceDataset(val_df, seq_len, use_technical=use_technical, label_threshold=label_threshold, is_returns=is_returns)
+    test_ds = StockSequenceDataset(test_df, seq_len, use_technical=use_technical, label_threshold=label_threshold, is_returns=is_returns)
 
     train_loader = torch.utils.data.DataLoader(
         train_ds, batch_size=batch_size, shuffle=True, drop_last=True

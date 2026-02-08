@@ -10,7 +10,7 @@ import random
 import numpy as np
 
 from stock_transformer.config import DataConfig, ModelConfig, TrainConfig
-from stock_transformer.data.fetcher import load_cached_or_fetch
+from stock_transformer.data.fetcher import load_cached_or_fetch, fetch_multi_tickers
 from stock_transformer.data.dataset import create_dataloaders
 from stock_transformer.models.transformer import DualPathCausalTransformer
 from stock_transformer.utils.trainer import get_device, train, test_report
@@ -42,10 +42,17 @@ def main():
 
     # ── 1. 데이터 수집 ──
     print("\n[Step 1] 데이터 수집")
-    df = load_cached_or_fetch(
-        ticker=data_cfg.ticker,
-        interval=data_cfg.interval,
-    )
+    if data_cfg.multi_ticker:
+        print(f"  종목: {data_cfg.tickers}")
+        df = fetch_multi_tickers(
+            tickers=data_cfg.tickers,
+            interval=data_cfg.interval,
+        )
+    else:
+        df = load_cached_or_fetch(
+            ticker=data_cfg.ticker,
+            interval=data_cfg.interval,
+        )
     print(f"  총 {len(df)}개 봉 로드됨")
 
     # ── 2. DataLoader 생성 ──
@@ -58,6 +65,7 @@ def main():
         val_ratio=data_cfg.val_ratio,
         label_threshold=train_cfg.label_threshold,
         use_technical=model_cfg.use_technical_indicators,
+        is_returns=data_cfg.multi_ticker,
     )
 
     # ── 3. 모델 생성 ──

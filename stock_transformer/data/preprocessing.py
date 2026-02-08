@@ -48,18 +48,23 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def create_labels(df: pd.DataFrame, threshold: float = 0.001) -> pd.Series:
+def create_labels(df: pd.DataFrame, threshold: float = 0.001, is_returns: bool = False) -> pd.Series:
     """
     다음 봉 대비 수익률 기반 라벨 생성
 
     Args:
         df: Close 컬럼이 있는 DataFrame
         threshold: Flat 판단 기준 (±0.1%)
+        is_returns: True면 Close가 이미 수익률 (multi_ticker 모드)
 
     Returns:
         라벨 Series (0=Down, 1=Flat, 2=Up)
     """
-    returns = df["Close"].pct_change().shift(-1)  # 다음 봉 수익률
+    if is_returns:
+        # 이미 수익률 데이터 → 다음 봉의 Close값 자체가 수익률
+        returns = df["Close"].shift(-1)
+    else:
+        returns = df["Close"].pct_change().shift(-1)
 
     labels = pd.Series(1, index=df.index, dtype=int)  # 기본 Flat
     labels[returns > threshold] = 2   # Up
