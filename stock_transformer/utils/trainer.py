@@ -111,6 +111,7 @@ def train(
 
     best_val_loss = float("inf")
     patience_counter = 0
+    model_saved = False
     save_path = Path(save_dir)
     save_path.mkdir(parents=True, exist_ok=True)
 
@@ -126,6 +127,15 @@ def train(
         scheduler.step()
         current_lr = optimizer.param_groups[0]["lr"]
 
+        # NaN 감지 시 경고
+        if train_loss != train_loss:  # NaN check
+            print(f"[Epoch {epoch:3d}/{epochs}] ⚠ NaN detected! Skipping...")
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"\n[Trainer] Early stopping at epoch {epoch} (NaN)")
+                break
+            continue
+
         # Logging
         print(
             f"[Epoch {epoch:3d}/{epochs}] "
@@ -139,7 +149,8 @@ def train(
             best_val_loss = val_loss
             patience_counter = 0
             torch.save(model.state_dict(), save_path / "best_model.pt")
-            print(f"  ✓ Best model saved (val_loss: {val_loss:.4f})")
+            model_saved = True
+            print(f"  -> Best model saved (val_loss: {val_loss:.4f})")
         else:
             patience_counter += 1
             if patience_counter >= patience:
@@ -147,8 +158,11 @@ def train(
                 break
 
     # 최적 모델 로드
-    model.load_state_dict(torch.load(save_path / "best_model.pt", weights_only=True))
-    print(f"\n[Trainer] 학습 완료. Best Val Loss: {best_val_loss:.4f}")
+    if model_saved:
+        model.load_state_dict(torch.load(save_path / "best_model.pt", weights_only=True))
+        print(f"\n[Trainer] 학습 완료. Best Val Loss: {best_val_loss:.4f}")
+    else:
+        print("\n[Trainer] 학습 완료. (모델 저장 없음 — 마지막 상태 사용)")
 
     return model
 

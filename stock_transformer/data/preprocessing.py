@@ -20,27 +20,30 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     close = df["Close"]
     volume = df["Volume"]
 
-    # RSI (14기간)
+    # RSI (14기간) — 0~100 범위로 정규화
     delta = close.diff()
     gain = delta.clip(lower=0)
     loss = (-delta.clip(upper=0))
     avg_gain = gain.rolling(window=14, min_periods=1).mean()
     avg_loss = loss.rolling(window=14, min_periods=1).mean()
     rs = avg_gain / (avg_loss + 1e-10)
-    df["RSI"] = 100 - (100 / (1 + rs))
+    df["RSI"] = (100 - (100 / (1 + rs))) / 100.0  # 0~1로 스케일링
 
-    # 이동평균
-    df["MA_10"] = close.rolling(window=10, min_periods=1).mean()
-    df["MA_30"] = close.rolling(window=30, min_periods=1).mean()
+    # 이동평균 — Close 대비 비율로 변환
+    df["MA_10"] = close.rolling(window=10, min_periods=1).mean() / close - 1.0
+    df["MA_30"] = close.rolling(window=30, min_periods=1).mean() / close - 1.0
 
-    # MACD (12, 26, 9)
+    # MACD (12, 26, 9) — Close 대비 비율로 변환
     ema12 = close.ewm(span=12, adjust=False).mean()
     ema26 = close.ewm(span=26, adjust=False).mean()
-    df["MACD"] = ema12 - ema26
+    df["MACD"] = (ema12 - ema26) / close
     df["MACD_signal"] = df["MACD"].ewm(span=9, adjust=False).mean()
 
     # 거래량 변화율
-    df["Volume_change"] = volume.pct_change().fillna(0).clip(-10, 10)
+    df["Volume_change"] = volume.pct_change().fillna(0).clip(-5, 5)
+
+    # Volume을 로그 스케일로 변환 (큰 값 문제 해결)
+    df["Volume"] = np.log1p(df["Volume"])
 
     return df
 
@@ -67,7 +70,7 @@ def create_labels(df: pd.DataFrame, threshold: float = 0.001) -> pd.Series:
 
 def normalize_window(data: np.ndarray) -> tuple:
     """
-    윈도우 내 Min-Max 정규화
+    윈도우 내 Min-Max 정규화 (NaN/Inf 안전 처리)
 
     Args:
         data: shape (seq_len, features)
@@ -75,10 +78,17 @@ def normalize_window(data: np.ndarray) -> tuple:
     Returns:
         (normalized_data, min_vals, max_vals)
     """
+    # NaN을 0으로, Inf를 큰 값으로 치환
+    data = np.nan_to_num(data, nan=0.0, posinf=1e6, neginf=-1e6)
+
     min_vals = data.min(axis=0)
     max_vals = data.max(axis=0)
     range_vals = max_vals - min_vals
     range_vals[range_vals == 0] = 1  # 0 나눗셈 방지
 
     normalized = (data - min_vals) / range_vals
+
+    # 혹시 남은 NaN 제거
+    normalized = np.nan_to_num(normalized, nan=0.0)
+
     return normalized, min_vals, max_vals
