@@ -3,6 +3,7 @@
 """
 import torch
 import torch.nn as nn
+import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.metrics import classification_report, confusion_matrix
 
@@ -80,6 +81,37 @@ def evaluate(model, loader, criterion, device):
     return avg_loss, accuracy, all_preds, all_labels
 
 
+def plot_training_curves(history: dict, save_path: str = "training_curves.png"):
+    """학습 곡선 시각화"""
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    epochs = range(1, len(history["train_loss"]) + 1)
+
+    # Loss 곡선
+    axes[0].plot(epochs, history["train_loss"], "b-o", markersize=3, label="Train Loss")
+    axes[0].plot(epochs, history["val_loss"], "r-o", markersize=3, label="Val Loss")
+    axes[0].set_xlabel("Epoch")
+    axes[0].set_ylabel("Loss")
+    axes[0].set_title("Loss Curve")
+    axes[0].legend()
+    axes[0].grid(True, alpha=0.3)
+
+    # Accuracy 곡선
+    axes[1].plot(epochs, history["train_acc"], "b-o", markersize=3, label="Train Acc")
+    axes[1].plot(epochs, history["val_acc"], "r-o", markersize=3, label="Val Acc")
+    axes[1].set_xlabel("Epoch")
+    axes[1].set_ylabel("Accuracy")
+    axes[1].set_title("Accuracy Curve")
+    axes[1].legend()
+    axes[1].grid(True, alpha=0.3)
+    axes[1].set_ylim(0, 1)
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150)
+    plt.show()
+    print(f"[Plot] 학습 곡선 저장: {save_path}")
+
+
 def train(
     model,
     train_loader,
@@ -115,6 +147,9 @@ def train(
     save_path = Path(save_dir)
     save_path.mkdir(parents=True, exist_ok=True)
 
+    # 학습 기록
+    history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": []}
+
     for epoch in range(1, epochs + 1):
         # Train
         train_loss, train_acc = train_one_epoch(
@@ -136,6 +171,12 @@ def train(
                 break
             continue
 
+        # 기록 저장
+        history["train_loss"].append(train_loss)
+        history["val_loss"].append(val_loss)
+        history["train_acc"].append(train_acc)
+        history["val_acc"].append(val_acc)
+
         # Logging
         print(
             f"[Epoch {epoch:3d}/{epochs}] "
@@ -156,6 +197,10 @@ def train(
             if patience_counter >= patience:
                 print(f"\n[Trainer] Early stopping at epoch {epoch}")
                 break
+
+    # 학습 곡선 시각화
+    if history["train_loss"]:
+        plot_training_curves(history, save_path=str(save_path / "training_curves.png"))
 
     # 최적 모델 로드
     if model_saved:
